@@ -6,6 +6,7 @@ import com.github.NGoedix.watchvideo.block.entity.custom.TVBlockEntity;
 import com.github.NGoedix.watchvideo.block.entity.custom.VideoPlayerBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
@@ -76,7 +77,7 @@ public class RadioBlock extends Block implements EntityBlock {
         BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
         if (!pLevel.isClientSide) {
             if (blockEntity instanceof RadioBlockEntity radioBlockEntity) {
-                radioBlockEntity.tryOpen(pLevel, pPos, pPlayer);
+                radioBlockEntity.tryOpen(pLevel, pPos, (ServerPlayer) pPlayer);
             }
         }
 

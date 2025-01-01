@@ -6,6 +6,7 @@ import com.github.NGoedix.watchvideo.network.message.OpenRadioManagerScreen;
 import com.github.NGoedix.watchvideo.network.message.RadioMessage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -20,7 +21,7 @@ public class HandRadioBlockEntity extends VideoPlayerBlockEntity {
         super(ModBlockEntities.HAND_RADIO_BLOCK_ENTITY.get(), pWorldPosition, pBlockState, true);
     }
 
-    public void tryOpen(Level level, BlockPos blockPos, Player player) {
+    public void tryOpen(Level level, BlockPos blockPos, ServerPlayer player) {
         // If none is using the block, open the GUI
         if (playerUsing == null) {
             setBeingUsed(player.getUUID());
@@ -37,9 +38,9 @@ public class HandRadioBlockEntity extends VideoPlayerBlockEntity {
         openRadioManagerGUI(blockPos, player);
     }
 
-    public void openRadioManagerGUI(BlockPos blockPos, Player player) {
+    public void openRadioManagerGUI(BlockPos blockPos, ServerPlayer player) {
         setBeingUsed(player.getUUID());
-        PacketHandler.sendTo(new OpenRadioManagerScreen(blockPos, getUrl(), getVolume(), isPlaying()), player);
+        PacketHandler.sendTo(new OpenRadioManagerScreen(blockPos, getUrl().toString(), getVolume(), isPlaying()), player);
     }
 
     public void setBeingUsed(UUID player) {
@@ -67,6 +68,6 @@ public class HandRadioBlockEntity extends VideoPlayerBlockEntity {
 
     public void notifyPlayer() {
         if (this.level == null) return;
-        PacketHandler.sendToClient(new RadioMessage(getUrl(), worldPosition, isPlaying()), level, worldPosition);
+        PacketHandler.sendToClient(new RadioMessage(this.getUrl().toString(), worldPosition, isPlaying()), level, worldPosition);
     }
 }

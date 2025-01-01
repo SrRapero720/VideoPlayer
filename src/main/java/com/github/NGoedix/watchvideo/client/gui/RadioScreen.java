@@ -20,6 +20,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +47,7 @@ public class RadioScreen extends Screen {
     // Control
     private final RadioBlockEntity be;
     private final ItemStack item;
-    private String url;
+    private URI url;
     private int volume;
     private boolean ready = false;
 
@@ -94,27 +96,28 @@ public class RadioScreen extends Screen {
         });
         countryList.setSelected(getCountryFromStationUrl(url));
 
-        // Expresión regular para validar una URL
-        String urlPattern = "(http|https)://(www\\.)?([\\w]+\\.)+[\\w]{2,63}/?[\\w\\-\\?\\=\\&\\%\\.\\/]*/?";
-
         addRenderableWidget(urlField = new EditBox(font, leftPos + 12, height / 2 - 30, imageWidth - 28, 20, new TextComponent("")));
         urlField.setResponder(text -> {
             if (!ready) return;
             if (countryList.getSelectedText().equals("Custom")) {
-                if (text.matches(urlPattern))
-                    sendUpdate(urlField.getValue(), volume, true, 0, false);
+                try {
+                    new URI(text);
+                    sendUpdate(text, volume, true, 0, false);
+                } catch (URISyntaxException e) {
+                    return;
+                }
             }
         });
         urlField.setEditable(countryList.getSelectedText().equals("Custom"));
         urlField.setMaxLength(32767);
-        urlField.setValue(url);
+        urlField.setValue(url.toString());
 
         addRenderableWidget(stationList = new ScrollingStringList((width / 2) + 172, height / 2 - 3, 100, 248, getStationNamesForCountry(countryList.getSelectedText(), RadioStreams.getRadioStreams())));
         stationList.setPlayerSlotClickListener(text -> {
             if (!ready) return;
 
             if (text != null && !text.isEmpty()) {
-                urlField.setValue(getStationUrlFromStation(text));
+                urlField.setValue(getStationUrlFromStation(text).toString());
                 sendUpdate(urlField.getValue(), volume, pauseButton.visible, 0, false);
             }
         });
@@ -155,7 +158,7 @@ public class RadioScreen extends Screen {
                 sendUpdate(urlField.getValue(), volume, true, 0, false);
             }
         }));
-        playButton.visible = be != null ? !be.isPlaying() : url.isEmpty();
+        playButton.visible = be != null ? !be.isPlaying() : url == null;
 
         addRenderableWidget(pauseButton = new ImageButtonHoverable(width / 2 - 10, topPos + 150, 20, 20, 0, 0, 0, PAUSE_BUTTON_TEXTURE, PAUSE_HOVER_BUTTON_TEXTURE, 20, 20, button -> {
             if (!ready) return;
@@ -174,13 +177,13 @@ public class RadioScreen extends Screen {
                 sendUpdate(urlField.getValue(), volume, false, 0, false);
             }
         }));
-        pauseButton.visible = be != null ? be.isPlaying() : !url.isEmpty();
+        pauseButton.visible = be != null ? be.isPlaying() : url != null;
     }
 
-    private String getCountryFromStationUrl(String url) {
+    private String getCountryFromStationUrl(URI url) {
         for (Map.Entry<String, List<RadioStreams.RadioStream>> entry : RadioStreams.getRadioStreams().entrySet()) {
             for (RadioStreams.RadioStream station : entry.getValue()) {
-                if (station.getStreamLink().equals(url)) {
+                if (station.streamLink().equals(url)) {
                     return entry.getKey();
                 }
             }
@@ -188,11 +191,11 @@ public class RadioScreen extends Screen {
         return "Custom";
     }
 
-    private String getStationFromStationUrl(String url) {
+    private String getStationFromStationUrl(URI url) {
         for (Map.Entry<String, List<RadioStreams.RadioStream>> entry : RadioStreams.getRadioStreams().entrySet()) {
             for (RadioStreams.RadioStream station : entry.getValue()) {
-                if (station.getStreamLink().equals(url)) {
-                    return station.getRadioName();
+                if (station.streamLink().equals(url)) {
+                    return station.radioName();
                 }
             }
         }
@@ -211,7 +214,7 @@ public class RadioScreen extends Screen {
         List<RadioStreams.RadioStream> stations = radioStreamsByCountry.get(country);
         if (stations != null) {
             for (RadioStreams.RadioStream station : stations) {
-                stationNames.add(station.getRadioName());
+                stationNames.add(station.radioName());
             }
         }
 
@@ -221,15 +224,15 @@ public class RadioScreen extends Screen {
         return stationNames;
     }
 
-    private String getStationUrlFromStation(String stationUrl) {
+    private URI getStationUrlFromStation(String stationName) {
         for (Map.Entry<String, List<RadioStreams.RadioStream>> entry : RadioStreams.getRadioStreams().entrySet()) {
-            for (RadioStreams.RadioStream station : entry.getValue()) {
-                if (station.getRadioName().equals(stationUrl)) {
-                    return station.getStreamLink();
+            for (final RadioStreams.RadioStream station : entry.getValue()) {
+                if (station.radioName().equals(stationName)) {
+                    return station.streamLink();
                 }
             }
         }
-        return "";
+        return null;
     }
 
     @Override

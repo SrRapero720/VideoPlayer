@@ -3,21 +3,21 @@ package com.github.NGoedix.watchvideo.util.displayers;
 import com.github.NGoedix.watchvideo.util.cache.TextureCache;
 import com.github.NGoedix.watchvideo.util.math.geo.Vec3d;
 import com.github.NGoedix.watchvideo.util.math.VideoMathUtil;
-import me.lib720.watermod.safety.TryCore;
-import me.srrapero720.watermedia.api.math.MathAPI;
-import me.srrapero720.watermedia.api.player.SyncBasePlayer;
-import me.srrapero720.watermedia.api.player.SyncMusicPlayer;
-import me.srrapero720.watermedia.api.player.SyncVideoPlayer;
+import org.watermedia.api.math.MathAPI;
+import org.watermedia.api.player.videolan.BasePlayer;
+import org.watermedia.api.player.videolan.MusicPlayer;
+import org.watermedia.api.player.videolan.VideoPlayer;
 import net.minecraft.client.Minecraft;
 
 import java.awt.*;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class VideoDisplayer implements IDisplay {
 
-    private static final String VLC_FAILED = "https://i.imgur.com/XCcN2uX.png";
+    private static final URI VLC_FAILED = URI.create("https://i.imgur.com/XCcN2uX.png");
 
     private static final int ACCEPTABLE_SYNC_TIME = 1500;
 
@@ -44,33 +44,35 @@ public class VideoDisplayer implements IDisplay {
         }
     }
 
-    public static IDisplay createVideoDisplay(Vec3d pos, String url, float volume, float minDistance, float maxDistance, boolean loop, boolean playing, boolean isOnlyMusic) {
+    public static IDisplay createVideoDisplay(Vec3d pos, URI url, float volume, float minDistance, float maxDistance, boolean loop, boolean playing, boolean isOnlyMusic) {
         TextureCache cache = TextureCache.get(VLC_FAILED);
 
-        return TryCore.withReturn((defaultVar) -> {
-            VideoDisplayer display = new VideoDisplayer(pos, url, volume, minDistance, maxDistance, loop, isOnlyMusic);
-            if (display.player.raw() == null) throw new IllegalStateException("VideoDisplayer uses a broken player");
+        try {
+            final VideoDisplayer display = new VideoDisplayer(pos, url, volume, minDistance, maxDistance, loop, isOnlyMusic);
+            if (display.player.isBroken()) throw new IllegalStateException("VideoDisplayer uses a broken player");
             OPEN_DISPLAYS.add(display);
             return display;
-        }, cache.ready() ? (IDisplay) new ImageDisplayer(cache.getPicture()) : null);
+        } catch (Exception e) {
+            return cache.ready() ? new ImageDisplayer(cache.getPicture()) : null;
+        }
     }
 
-    public SyncBasePlayer player;
+    public BasePlayer player;
 
     private final Vec3d pos;
-    private String url;
+    private URI url;
     private float lastSetVolume;
     private long lastCorrectedTime = Long.MIN_VALUE;
 
-    public VideoDisplayer(Vec3d pos, String url, float volume, float minDistance, float maxDistance, boolean loop, boolean isOnlyMusic) {
+    public VideoDisplayer(Vec3d pos, URI url, float volume, float minDistance, float maxDistance, boolean loop, boolean isOnlyMusic) {
         this.pos = pos;
         this.url = url;
 
-        if (!url.isEmpty()) {
+        if (url == null) {
             if (isOnlyMusic) {
-                player = new SyncMusicPlayer();
+                player = new MusicPlayer();
             } else {
-                player = new SyncVideoPlayer(null, Minecraft.getInstance());
+                player = new VideoPlayer(null, Minecraft.getInstance());
             }
             adjustVolume(volume, minDistance, maxDistance);
             player.setRepeatMode(loop);
@@ -93,12 +95,12 @@ public class VideoDisplayer implements IDisplay {
     }
 
     @Override
-    public String getUrl() {
+    public URI getUrl() {
         return url;
     }
 
     @Override
-    public void tick(String url, float volume, float minDistance, float maxDistance, boolean playing, boolean loop, int tick) {
+    public void tick(URI url, float volume, float minDistance, float maxDistance, boolean playing, boolean loop, int tick) {
         if (player == null || url == null)
             return;
 
@@ -154,27 +156,27 @@ public class VideoDisplayer implements IDisplay {
     }
 
     @Override
-    public int prepare(String url, boolean playing, boolean loop, int tick) {
-        if (player == null) return -1;
+    public int prepare(URI url, boolean playing, boolean loop, int tick) {
+        if (this.player == null) return -1;
         this.url = url;
-        if (player instanceof SyncVideoPlayer)
-            return ((SyncVideoPlayer) player).getGlTexture();
+        if (this.player instanceof VideoPlayer videoPlayer)
+            return videoPlayer.preRender();
 
         return 0;
     }
 
     @Override
     public int getRenderTexture() {
-        if (player instanceof SyncVideoPlayer)
-            return ((SyncVideoPlayer) player).getGlTexture();
+        if (this.player instanceof final VideoPlayer videoPlayer)
+            return videoPlayer.texture();
 
         return 0;
     }
 
     public void free() {
-        if (player != null) {
-            player.release();
-            player = null;
+        if (this.player != null) {
+            this.player.release();
+            this.player = null;
         }
     }
 
@@ -210,9 +212,9 @@ public class VideoDisplayer implements IDisplay {
 
     @Override
     public Dimension getDimensions() {
-        if (player == null) return null;
-        if (player instanceof SyncVideoPlayer)
-            return ((SyncVideoPlayer) player).getDimensions();
+        if (this.player == null) return null;
+        if (this.player instanceof VideoPlayer videoPlayer)
+            return videoPlayer.dimension();
 
         return null;
     }

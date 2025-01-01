@@ -1,10 +1,12 @@
 package com.github.NGoedix.watchvideo.network.message;
 
+import com.github.NGoedix.watchvideo.Reference;
 import com.github.NGoedix.watchvideo.client.ClientHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.util.function.Supplier;
 
 public class OpenVideoManagerScreen implements IMessage<OpenVideoManagerScreen> {
@@ -41,8 +43,11 @@ public class OpenVideoManagerScreen implements IMessage<OpenVideoManagerScreen> 
 
     @Override
     public void handle(OpenVideoManagerScreen message, Supplier<NetworkEvent.Context> supplier) {
+        Reference.LOGGER.info("HANDLE OUT");
         supplier.get().enqueueWork(() -> {
-            ClientHandler.openVideoGUI(message.blockPos, message.url, message.volume, message.tick, message.isPlaying);
+            Reference.LOGGER.info("handle");
+            ClientHandler.openVideoGUI(message.blockPos, (message.url == null || message.url.isEmpty()) ? null : URI.create(message.url), message.volume, message.tick, message.isPlaying);
         });
+        supplier.get().setPacketHandled(true);
     }
 }

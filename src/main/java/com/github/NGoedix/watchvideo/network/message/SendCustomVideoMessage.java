@@ -4,6 +4,7 @@ import com.github.NGoedix.watchvideo.client.ClientHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 
@@ -43,8 +44,7 @@ public class SendCustomVideoMessage implements IMessage<SendCustomVideoMessage> 
     public void encode(SendCustomVideoMessage message, FriendlyByteBuf buffer) {
         buffer.writeEnum(message.state);
         if (message.state == VideoMessageType.START) {
-            buffer.writeInt(message.url.length());
-            buffer.writeCharSequence(message.url, StandardCharsets.UTF_8);
+            buffer.writeUtf(message.url);
             buffer.writeInt(message.volume);
             buffer.writeBoolean(message.isControlBlocked);
             buffer.writeBoolean(message.canSkip);
@@ -61,8 +61,7 @@ public class SendCustomVideoMessage implements IMessage<SendCustomVideoMessage> 
     public SendCustomVideoMessage decode(FriendlyByteBuf buffer) {
         VideoMessageType state = buffer.readEnum(VideoMessageType.class);
         if (state == VideoMessageType.START) {
-            int l = buffer.readInt();
-            String url = String.valueOf(buffer.readCharSequence(l, StandardCharsets.UTF_8));
+            String url_v = buffer.readUtf();
             int volume = buffer.readInt();
             boolean isControlBlocked = buffer.readBoolean();
             boolean canSkip = buffer.readBoolean();
@@ -73,7 +72,7 @@ public class SendCustomVideoMessage implements IMessage<SendCustomVideoMessage> 
             int optionOutMode = buffer.readInt();
             int optionOutSecs = buffer.readInt();
 
-            return new SendCustomVideoMessage(url, volume, isControlBlocked, canSkip, mode, position, optionInMode, optionInSecs, optionOutMode, optionOutSecs);
+            return new SendCustomVideoMessage(url_v, volume, isControlBlocked, canSkip, mode, position, optionInMode, optionInSecs, optionOutMode, optionOutSecs);
         }
         return new SendCustomVideoMessage();
     }
@@ -83,7 +82,7 @@ public class SendCustomVideoMessage implements IMessage<SendCustomVideoMessage> 
         supplier.get().enqueueWork(() -> {
             if (message.state == VideoMessageType.START) {
                 // Fullscreen = 0, Partial = 1
-                if (mode == 0) ClientHandler.openVideo(message.url, message.volume, message.isControlBlocked, message.canSkip, message.optionInMode, message.optionInSecs, message.optionOutMode, message.optionOutSecs);
+                if (mode == 0) ClientHandler.openVideo(message.url.isEmpty() ? null : URI.create(message.url), message.volume, message.isControlBlocked, message.canSkip, message.optionInMode, message.optionInSecs, message.optionOutMode, message.optionOutSecs);
 //                if (mode == 1) ClientHandler.openVideo(message.url, message.volume, message.posX, message.posY, message.width, message.height);
             }
             if (message.state == VideoMessageType.STOP) ClientHandler.stopVideoIfExists();

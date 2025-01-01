@@ -1,14 +1,15 @@
 package com.github.NGoedix.watchvideo.util.displayers;
 
-import me.srrapero720.watermedia.api.image.ImageRenderer;
+import org.watermedia.api.image.ImageRenderer;
 import net.minecraft.client.Minecraft;
 
 import java.awt.*;
+import java.net.URI;
 
 public class ImageDisplayer implements IDisplay {
 
     public final ImageRenderer picture;
-    private String url;
+    private URI url;
 
     public ImageDisplayer(ImageRenderer picture) {
         this.picture = picture;
@@ -31,7 +32,7 @@ public class ImageDisplayer implements IDisplay {
     }
 
     @Override
-    public int prepare(String url, boolean playing, boolean loop, int tick) {
+    public int prepare(URI url, boolean playing, boolean loop, int tick) {
         this.url = url;
         long time = tick * 50L + (playing ? (long) (Minecraft.getInstance().isPaused() ? 1.0F : Minecraft.getInstance().getFrameTime() * 50) : 0);
         long duration = picture.duration;
@@ -45,12 +46,12 @@ public class ImageDisplayer implements IDisplay {
     }
 
     @Override
-    public String getUrl() {
+    public URI getUrl() {
         return url;
     }
 
     @Override
-    public void tick(String url, float volume, float minDistance, float maxDistance, boolean playing, boolean loop, int tick) {}
+    public void tick(URI url, float volume, float minDistance, float maxDistance, boolean playing, boolean loop, int tick) {}
 
     @Override
     public void pause(int tick) {}

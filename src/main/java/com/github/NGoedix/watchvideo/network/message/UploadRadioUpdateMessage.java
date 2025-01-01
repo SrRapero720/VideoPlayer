@@ -1,14 +1,17 @@
 package com.github.NGoedix.watchvideo.network.message;
 
 
+import com.github.NGoedix.watchvideo.Reference;
 import com.github.NGoedix.watchvideo.block.entity.custom.RadioBlockEntity;
 import com.github.NGoedix.watchvideo.item.custom.HandRadioItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -69,26 +72,25 @@ public class UploadRadioUpdateMessage implements IMessage<UploadRadioUpdateMessa
     @Override
     public void handle(UploadRadioUpdateMessage message, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
+            final Player player = ctx.get().getSender();
             if (player == null) return;
             if (message.blockPos != null) {
-                if (player.level.getBlockEntity(message.blockPos) instanceof RadioBlockEntity) {
-                    RadioBlockEntity radioBlockEntity = (RadioBlockEntity) player.level.getBlockEntity(message.blockPos);
-                    if (radioBlockEntity == null) return;
-
+                if (player.level.getBlockEntity(message.blockPos) instanceof RadioBlockEntity radioBlock) {
                     if (message.exit)
-                        radioBlockEntity.setBeingUsed(new UUID(0, 0));
+                        radioBlock.setBeingUsed(new UUID(0, 0));
                     else {
-                        radioBlockEntity.setUrl(message.url);
+                        radioBlock.setUrl(this.url == null || this.url.isEmpty() ? null : URI.create(message.url));
 
                         if (tick != -1)
-                            radioBlockEntity.setTick(message.tick);
+                            radioBlock.setTick(message.tick);
 
-                        radioBlockEntity.setVolume(message.volume);
-                        radioBlockEntity.setPlaying(message.isPlaying);
+                        radioBlock.setVolume(message.volume);
+                        radioBlock.setPlaying(message.isPlaying);
 
-                        radioBlockEntity.notifyPlayer();
+                        radioBlock.notifyPlayer();
                     }
+                } else {
+                    Reference.LOGGER.info("CLICKED");
                 }
             } else {
                 HandRadioItem.setUrl(message.stack, message.url);
@@ -98,5 +100,6 @@ public class UploadRadioUpdateMessage implements IMessage<UploadRadioUpdateMessa
                 player.inventoryMenu.broadcastChanges();
             }
         });
+        ctx.get().setPacketHandled(true);
     }
 }

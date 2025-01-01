@@ -1,5 +1,6 @@
 package com.github.NGoedix.watchvideo.util;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -63,32 +64,17 @@ public class RadioStreams {
         addRadio("Brazil", "Radio Azul", "https://r16.ciclano.io:15004/stream?1722982939300");
         addRadio("Brazil", "Radio Antena", "https://antenaone.crossradio.com.br/stream/1/");
 
-        addRadio("Custom", "", "");
+        addRadio("Custom", "", null);
     }
 
     public static void addRadio(String countryName, String radioName, String streamLink) {
-        radioStreams.computeIfAbsent(countryName, k -> new ArrayList<>()).add(new RadioStream(radioName, streamLink));
+        radioStreams.computeIfAbsent(countryName, k -> new ArrayList<>()).add(new RadioStream(radioName, streamLink != null ? URI.create(streamLink): null));
     }
 
     public static Map<String, List<RadioStream>> getRadioStreams() {
         return radioStreams;
     }
 
-    public static class RadioStream {
-        private final String radioName;
-        private final String streamLink;
-
-        public RadioStream(String radioName, String streamLink) {
-            this.radioName = radioName;
-            this.streamLink = streamLink;
-        }
-
-        public String getRadioName() {
-            return radioName;
-        }
-
-        public String getStreamLink() {
-            return streamLink;
-        }
+    public record RadioStream(String radioName, URI streamLink) {
     }
 }

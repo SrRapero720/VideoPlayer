@@ -8,6 +8,7 @@ import com.github.NGoedix.watchvideo.util.config.TVConfig;
 import com.github.NGoedix.watchvideo.util.displayers.IDisplay;
 import com.github.NGoedix.watchvideo.util.math.geo.Vec3d;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
@@ -19,6 +20,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
+import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -41,7 +43,7 @@ public class HandRadioItem extends BlockItem {
             int volume = tag.getInt("volume");
             boolean isPlaying = tag.getBoolean("isPlaying");
 
-            PacketHandler.sendTo(new OpenRadioManagerScreen(pPlayer.getItemInHand(pHand), url, volume, isPlaying), pPlayer);
+            PacketHandler.sendTo(new OpenRadioManagerScreen(pPlayer.getItemInHand(pHand), url, volume, isPlaying), (ServerPlayer) pPlayer);
         }
 
         return InteractionResultHolder.success(pPlayer.getItemInHand(pHand));
@@ -69,9 +71,16 @@ public class HandRadioItem extends BlockItem {
         tag.putString("url", url);
     }
 
-    public static String getUrl(ItemStack stack) {
-        CompoundTag tag = stack.getOrCreateTag();
-        return tag.getString("url");
+    public static URI getUrl(ItemStack stack) {
+        final CompoundTag tag = stack.getOrCreateTag();
+        final String url = tag.getString("url");
+        if (url.isEmpty()) return null;
+
+        try {
+            return new URI(url);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static void setVolume(ItemStack stack, int volume) {
@@ -106,8 +115,8 @@ public class HandRadioItem extends BlockItem {
 
     @OnlyIn(Dist.CLIENT)
     public static IDisplay requestDisplay(ItemStack stack) {
-        final String url = getUrl(stack);
-        if (isURLEmpty(url)) return null;
+        final URI url = getUrl(stack);
+        if (url == null) return null;
 
         final TextureCache cache = caches.computeIfAbsent(stack, s -> TextureCache.get(url));
         if (!url.equals(cache.url)) {

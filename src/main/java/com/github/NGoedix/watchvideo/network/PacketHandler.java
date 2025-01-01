@@ -16,7 +16,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 public class PacketHandler {
 
-    public static final String PROTOCOL_VERSION = "2";
+    public static final String PROTOCOL_VERSION = "3";
 
     private static SimpleChannel INSTANCE;
 
@@ -49,8 +49,8 @@ public class PacketHandler {
         return INSTANCE;
     }
 
-    public static <MSG> void sendTo(MSG msg, Player player) {
-        INSTANCE.sendTo(msg, ((ServerPlayer)player).connection.getConnection(), NetworkDirection.PLAY_TO_CLIENT);
+    public static <MSG> void sendTo(MSG msg, ServerPlayer player) {
+        INSTANCE.sendTo(msg, player.connection.getConnection(), NetworkDirection.PLAY_TO_CLIENT);
     }
 
     public static <MSG> void sendToClient(MSG message, Level level, BlockPos pos) {

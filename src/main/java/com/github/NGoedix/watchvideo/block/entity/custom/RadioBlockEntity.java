@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -22,7 +23,7 @@ public class RadioBlockEntity extends VideoPlayerBlockEntity {
         super(ModBlockEntities.RADIO_BLOCK_ENTITY.get(), pWorldPosition, pBlockState, true);
     }
 
-    public void tryOpen(Level level, BlockPos blockPos, Player player) {
+    public void tryOpen(Level level, BlockPos blockPos, ServerPlayer player) {
         // If none is using the block, open the GUI
         if (playerUsing == null) {
             setBeingUsed(player.getUUID());
@@ -39,9 +40,9 @@ public class RadioBlockEntity extends VideoPlayerBlockEntity {
         openRadioManagerGUI(blockPos, player);
     }
 
-    public void openRadioManagerGUI(BlockPos blockPos, Player player) {
+    public void openRadioManagerGUI(BlockPos blockPos, ServerPlayer player) {
         setBeingUsed(player.getUUID());
-        PacketHandler.sendTo(new OpenRadioManagerScreen(blockPos, getUrl(), getVolume(), isPlaying()), player);
+        PacketHandler.sendTo(new OpenRadioManagerScreen(blockPos, getUrl().toString(), getVolume(), isPlaying()), player);
     }
 
     public void setBeingUsed(UUID player) {

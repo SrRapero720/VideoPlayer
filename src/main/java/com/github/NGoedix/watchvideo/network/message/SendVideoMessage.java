@@ -4,6 +4,7 @@ import com.github.NGoedix.watchvideo.client.ClientHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 
@@ -31,8 +32,8 @@ public class SendVideoMessage implements IMessage<SendVideoMessage> {
     public void encode(SendVideoMessage message, FriendlyByteBuf buffer) {
         buffer.writeEnum(message.state);
         if (message.state == VideoMessageType.START) {
-            buffer.writeInt(message.url.length());
-            buffer.writeCharSequence(message.url, StandardCharsets.UTF_8);
+            final String str = message.url.toString();
+            buffer.writeUtf(str);
             buffer.writeInt(message.volume);
             buffer.writeBoolean(message.isControlBlocked);
             buffer.writeBoolean(message.canSkip);
@@ -43,8 +44,7 @@ public class SendVideoMessage implements IMessage<SendVideoMessage> {
     public SendVideoMessage decode(FriendlyByteBuf buffer) {
         VideoMessageType state = buffer.readEnum(VideoMessageType.class);
         if (state == VideoMessageType.START) {
-            int l = buffer.readInt();
-            String url = String.valueOf(buffer.readCharSequence(l, StandardCharsets.UTF_8));
+            String url = buffer.readUtf();
             int volume = buffer.readInt();
             boolean isControlBlocked = buffer.readBoolean();
             boolean canSkip = buffer.readBoolean();
@@ -56,7 +56,7 @@ public class SendVideoMessage implements IMessage<SendVideoMessage> {
     @Override
     public void handle(SendVideoMessage message, Supplier<NetworkEvent.Context> supplier) {
         supplier.get().enqueueWork(() -> {
-            if (message.state == VideoMessageType.START) ClientHandler.openVideo(message.url, message.volume, message.isControlBlocked, message.canSkip);
+            if (message.state == VideoMessageType.START) ClientHandler.openVideo(URI.create(message.url), message.volume, message.isControlBlocked, message.canSkip);
             if (message.state == VideoMessageType.STOP) ClientHandler.stopVideoIfExists();
         });
         supplier.get().setPacketHandled(true);

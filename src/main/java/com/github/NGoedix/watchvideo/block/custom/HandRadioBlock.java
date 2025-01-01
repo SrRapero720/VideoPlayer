@@ -7,6 +7,7 @@ import com.github.NGoedix.watchvideo.block.entity.custom.VideoPlayerBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
@@ -31,6 +32,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
+import java.net.URI;
+
 public class HandRadioBlock extends Block implements EntityBlock {
 
     public static final BooleanProperty LIT = RedstoneTorchBlock.LIT;
@@ -53,7 +56,14 @@ public class HandRadioBlock extends Block implements EntityBlock {
             CompoundTag tag = pStack.getOrCreateTag();
 
             if (tag.contains("url")) {
-                radioBlockEntity.setUrl(tag.getString("url"));
+                String url = tag.getString("url");
+                if (url.isEmpty()) radioBlockEntity.setUrl(null);
+
+                try {
+                    radioBlockEntity.setUrl(new URI(url));
+                } catch (Exception e) {
+                    radioBlockEntity.setUrl(null);
+                }
             }
             if (tag.contains("volume")) {
                 radioBlockEntity.setVolume(tag.getInt("volume"));
@@ -104,7 +114,7 @@ public class HandRadioBlock extends Block implements EntityBlock {
         BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
         if (!pLevel.isClientSide) {
             if (blockEntity instanceof HandRadioBlockEntity handBlockEntity) {
-                handBlockEntity.tryOpen(pLevel, pPos, pPlayer);
+                handBlockEntity.tryOpen(pLevel, pPos, (ServerPlayer) pPlayer);
             }
         }
 

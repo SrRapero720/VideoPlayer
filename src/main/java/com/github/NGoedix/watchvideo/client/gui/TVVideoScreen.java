@@ -10,10 +10,10 @@ import com.github.NGoedix.watchvideo.util.displayers.VideoDisplayer;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import me.srrapero720.watermedia.api.image.ImageAPI;
-import me.srrapero720.watermedia.api.image.ImageRenderer;
-import me.srrapero720.watermedia.api.math.MathAPI;
-import me.srrapero720.watermedia.api.player.SyncVideoPlayer;
+import org.watermedia.api.image.ImageAPI;
+import org.watermedia.api.image.ImageRenderer;
+import org.watermedia.api.math.MathAPI;
+import org.watermedia.api.player.videolan.VideoPlayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.Button;
@@ -27,6 +27,8 @@ import org.jetbrains.annotations.NotNull;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class TVVideoScreen extends Screen {
 
@@ -48,7 +50,7 @@ public class TVVideoScreen extends Screen {
     private CustomSlider timeSlider;
 
     private final TVBlockEntity be;
-    private String url;
+    private URI url;
     private int volume;
     private long maxDuration;
 
@@ -86,25 +88,29 @@ public class TVVideoScreen extends Screen {
         addRenderableWidget(urlBox = new EditBox(font, leftPos + 10, topPos + 165, imageWidth - 26, 20, new TextComponent("")));
         // Set the text to the url
         urlBox.setMaxLength(32767);
-        urlBox.setValue(url == null ? "" : url);
-        urlBox.setSuggestion(url == null || url.isEmpty() ? "https://youtube.com/watch?v=FUIcBBM5-xQ" : "");
+        urlBox.setValue(url == null ? "" : url.toString());
+        urlBox.setSuggestion(url == null ? "https://youtube.com/watch?v=FUIcBBM5-xQ" : "");
         urlBox.setResponder(s -> {
             if (s != null && !s.isEmpty()) {
                 urlBox.setSuggestion("");
-                if (s.matches(urlPattern) && (be.getTick() > 5 || url.isEmpty())) {
-                    if (!url.equals(s)) {
-                        be.setTick(0);
-                        url = s;
-                        PacketHandler.sendToServer(new UploadVideoUpdateMessage(be.getBlockPos(), url, volume, 0, true, false, false));
-                        playButton.visible = false;
-                        pauseButton.visible = true;
-                        maxDuration = 0;
-                        timeSlider.setValue(0);
+                URI uri = null;
+                try {
+                    uri = new URI(s);
+                } catch (URISyntaxException e) {
+                    // nothing
+                }
+                if (uri != null && (be.getTick() > 5 || !uri.equals(url))) {
+                    be.setTick(0);
+                    url = uri;
+                    PacketHandler.sendToServer(new UploadVideoUpdateMessage(be.getBlockPos(), uri, volume, 0, true, false, false));
+                    playButton.visible = false;
+                    pauseButton.visible = true;
+                    maxDuration = 0;
+                    timeSlider.setValue(0);
 
-                        if (be.requestDisplay() == null) return;
-                        be.requestDisplay().stop();
-                        be.requestDisplay().resume(0);
-                    }
+                    if (be.requestDisplay() == null) return;
+                    be.requestDisplay().stop();
+                    be.requestDisplay().resume(0);
                 }
             } else {
                 urlBox.setSuggestion("https://youtube.com/watch?v=FUIcBBM5-xQ");
@@ -113,7 +119,7 @@ public class TVVideoScreen extends Screen {
 
         // Play button
         addRenderableWidget(playButton = new ImageButtonHoverable(leftPos + 10, topPos + 190, 20, 20, 0, 0, 0, PLAY_BUTTON_TEXTURE, PLAY_HOVER_BUTTON_TEXTURE, 20, 20, button -> {
-            if (be.requestDisplay() != null && !url.isEmpty()) {
+            if (be.requestDisplay() != null && url != null) {
                 playButton.visible = false;
                 pauseButton.visible = true;
 
@@ -125,7 +131,7 @@ public class TVVideoScreen extends Screen {
 
         // Pause button
         addRenderableWidget(pauseButton = new ImageButtonHoverable(leftPos + 10, topPos + 190, 20, 20, 0, 0, 0, PAUSE_BUTTON_TEXTURE, PAUSE_HOVER_BUTTON_TEXTURE, 20, 20, button -> {
-            if (be.requestDisplay() != null && !url.isEmpty()) {
+            if (be.requestDisplay() != null && url != null) {
                 playButton.visible = true;
                 pauseButton.visible = false;
 
@@ -139,7 +145,7 @@ public class TVVideoScreen extends Screen {
 
         // Stop button
         addRenderableWidget(stopButton = new ImageButtonHoverable(leftPos + 32, topPos + 190, 20, 20, 0, 0, 0, STOP_BUTTON_TEXTURE, STOP_HOVER_BUTTON_TEXTURE, 20, 20, button -> {
-            if (be.requestDisplay() != null && !url.isEmpty()) {
+            if (be.requestDisplay() != null && url != null) {
                 playButton.visible = true;
                 pauseButton.visible = false;
 
@@ -155,7 +161,7 @@ public class TVVideoScreen extends Screen {
         timeSlider.setOnSlideListener(value -> {
             if (be.requestDisplay() == null) return;
             if (be.requestDisplay() instanceof VideoDisplayer) {
-                SyncVideoPlayer player = (SyncVideoPlayer) ((VideoDisplayer) be.requestDisplay()).player;
+                VideoPlayer player = (VideoPlayer) ((VideoDisplayer) be.requestDisplay()).player;
                 if (player.isReady() && !player.isLive()) {
                     player.seekTo((int) ((value / 100D) * player.getDuration()));
                 }
@@ -163,8 +169,8 @@ public class TVVideoScreen extends Screen {
             }
         });
 
-        if (be.requestDisplay() != null && be.requestDisplay() instanceof VideoDisplayer) {
-            SyncVideoPlayer player = (SyncVideoPlayer) ((VideoDisplayer) be.requestDisplay()).player;
+        if (be.requestDisplay() != null && be.requestDisplay() instanceof VideoDisplayer displayer) {
+            VideoPlayer player = (VideoPlayer) displayer.player;
             timeSlider.setValue((double) player.getTime() / player.getDuration());
         }
 
@@ -198,8 +204,8 @@ public class TVVideoScreen extends Screen {
         String maxTimeFormatted = "00:00";
         String actualTimeFormatted = "00:00";
 
-        if (be.requestDisplay() instanceof VideoDisplayer) {
-            SyncVideoPlayer player = (SyncVideoPlayer) ((VideoDisplayer) be.requestDisplay()).player;
+        if (be.requestDisplay() instanceof VideoDisplayer videoDisplayer) {
+            VideoPlayer player = (VideoPlayer) videoDisplayer.player;
 
             if (player != null && player.isReady()) {
                 timeSlider.setActive(!player.isLive());
@@ -232,7 +238,7 @@ public class TVVideoScreen extends Screen {
     }
 
     public void renderVideo(PoseStack pPoseStack) {
-        if (url.isEmpty()) return;
+        if (url == null) return;
 
         if (be.requestDisplay() == null) {
             renderIcon(pPoseStack, ImageAPI.loadingGif());

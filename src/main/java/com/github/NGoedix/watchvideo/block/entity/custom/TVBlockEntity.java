@@ -1,5 +1,6 @@
 package com.github.NGoedix.watchvideo.block.entity.custom;
 
+import com.github.NGoedix.watchvideo.Reference;
 import com.github.NGoedix.watchvideo.block.custom.TVBlock;
 import com.github.NGoedix.watchvideo.block.entity.ModBlockEntities;
 import com.github.NGoedix.watchvideo.network.message.OpenVideoManagerScreen;
@@ -11,10 +12,12 @@ import com.github.NGoedix.watchvideo.util.math.geo.Facing;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.net.URI;
 import java.util.UUID;
 
 public class TVBlockEntity extends VideoPlayerBlockEntity {
@@ -25,7 +28,7 @@ public class TVBlockEntity extends VideoPlayerBlockEntity {
         super(ModBlockEntities.TV_BLOCK_ENTITY.get(), pWorldPosition, pBlockState, false);
     }
 
-    public void tryOpen(Level level, BlockPos blockPos, Player player) {
+    public void tryOpen(Level level, BlockPos blockPos, ServerPlayer player) {
         // If none is using the block, open the GUI
         if (playerUsing == null) {
             setBeingUsed(player.getUUID());
@@ -42,9 +45,11 @@ public class TVBlockEntity extends VideoPlayerBlockEntity {
         openVideoManagerGUI(blockPos, player);
     }
 
-    public void openVideoManagerGUI(BlockPos blockPos, Player player) {
+    public void openVideoManagerGUI(BlockPos blockPos, ServerPlayer player) {
         setBeingUsed(player.getUUID());
-        PacketHandler.sendTo(new OpenVideoManagerScreen(blockPos, getUrl(), getVolume(), getTick(), isPlaying()), player);
+        Reference.LOGGER.info("PACKET HANDLER sendTo");
+        URI uri = getUrl();
+        PacketHandler.sendTo(new OpenVideoManagerScreen(blockPos, uri == null ? "" : uri.toString(), getVolume(), getTick(), isPlaying()), player);
     }
 
     public void setBeingUsed(UUID player) {
@@ -72,7 +77,7 @@ public class TVBlockEntity extends VideoPlayerBlockEntity {
 
     public void notifyPlayer() {
         if (this.level == null) return;
-        PacketHandler.sendToClient(new FrameVideoMessage(getUrl(), worldPosition, isPlaying(), getTick()), level, worldPosition);
+        PacketHandler.sendToClient(new FrameVideoMessage(getUrl().toString(), worldPosition, isPlaying(), getTick()), level, worldPosition);
     }
 
     public float getSizeX() {

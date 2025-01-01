@@ -1,11 +1,14 @@
 package com.github.NGoedix.watchvideo.network.message;
 
+import com.github.NGoedix.watchvideo.Reference;
 import com.github.NGoedix.watchvideo.block.entity.custom.TVBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -20,6 +23,16 @@ public class UploadVideoUpdateMessage implements IMessage<UploadVideoUpdateMessa
     private boolean exit;
 
     public UploadVideoUpdateMessage() {}
+
+    public UploadVideoUpdateMessage(BlockPos blockPos, URI url, int volume, int tick, boolean isPlaying, boolean stopped, boolean exit) {
+        this.blockPos = blockPos;
+        this.url = url == null ? "" : url.toString();
+        this.volume = volume;
+        this.tick = tick;
+        this.isPlaying = isPlaying;
+        this.stopped = stopped;
+        this.exit = exit;
+    }
 
     public UploadVideoUpdateMessage(BlockPos blockPos, String url, int volume, int tick, boolean isPlaying, boolean stopped, boolean exit) {
         this.blockPos = blockPos;
@@ -50,28 +63,31 @@ public class UploadVideoUpdateMessage implements IMessage<UploadVideoUpdateMessa
     @Override
     public void handle(UploadVideoUpdateMessage message, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
+            Player player = ctx.get().getSender();
             if (player == null) return;
             if (player.level.getBlockEntity(message.blockPos) instanceof TVBlockEntity) {
-                TVBlockEntity tvBlockEntity = (TVBlockEntity) player.level.getBlockEntity(message.blockPos);
-                if (tvBlockEntity == null) return;
+                if (player.level.getBlockEntity(message.blockPos) instanceof TVBlockEntity tv) {
+                    if (message.exit)
+                        tv.setBeingUsed(new UUID(0, 0));
+                    else {
+                        tv.setUrl(this.url == null || this.url.isEmpty() ? null : URI.create(message.url));
+                        tv.setVolume(message.volume);
 
-                if (message.exit)
-                    tvBlockEntity.setBeingUsed(new UUID(0, 0));
-                else {
-                    tvBlockEntity.setUrl(message.url);
-                    tvBlockEntity.setVolume(message.volume);
+                        if (message.tick != -1)
+                            tv.setTick(message.tick);
 
-                    if (message.tick != -1)
-                        tvBlockEntity.setTick(message.tick);
+                        tv.setPlaying(message.isPlaying);
 
-                    tvBlockEntity.setPlaying(message.isPlaying);
+                        if (message.stopped)
+                            tv.stop();
 
-                    if (message.stopped)
-                        tvBlockEntity.stop();
+                        tv.notifyPlayer();
+                    }}
+                } else {
+                Reference.LOGGER.info("BlockEntity is not a TV");
+            }
 
-                    tvBlockEntity.notifyPlayer();
-                }}
         });
+        ctx.get().setPacketHandled(true);
     }
 }

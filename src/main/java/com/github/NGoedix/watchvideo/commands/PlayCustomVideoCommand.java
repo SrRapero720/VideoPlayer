@@ -15,6 +15,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.net.URI;
 import java.util.Collection;
 
 public class PlayCustomVideoCommand {
@@ -64,6 +65,12 @@ public class PlayCustomVideoCommand {
 
         int volume = IntegerArgumentType.getInteger(context, "volume");
         String url = StringArgumentType.getString(context, "url");
+        try {
+            new URI(url);
+        } catch (Exception e) {
+            context.getSource().sendFailure(new TextComponent("Invalid URL"));
+            return 0;
+        }
         int mode = IntegerArgumentType.getInteger(context, "mode");
 
         // Fullscreen mode specific arguments

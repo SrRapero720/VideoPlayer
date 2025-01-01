@@ -1,14 +1,15 @@
 package com.github.NGoedix.watchvideo.util.displayers;
 
 import java.awt.*;
+import java.net.URI;
 
 public interface IDisplay {
 
-    String getUrl();
+    URI getUrl();
 
-    int prepare(String url, boolean playing, boolean loop, int tick);
+    int prepare(URI url, boolean playing, boolean loop, int tick);
 
-    void tick(String url, float volume, float minDistance, float maxDistance, boolean playing, boolean loop, int tick);
+    void tick(URI url, float volume, float minDistance, float maxDistance, boolean playing, boolean loop, int tick);
 
     default int maxTick() {
         return 0;

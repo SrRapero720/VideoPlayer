@@ -4,6 +4,7 @@ import com.github.NGoedix.watchvideo.client.ClientHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 
@@ -17,6 +18,12 @@ public class SendMusicMessage implements IMessage<SendMusicMessage> {
         this.state = MusicMessageType.STOP;
     }
 
+    public SendMusicMessage(URI url, int volume) {
+        this.url = url.toString();
+        this.volume = volume;
+        this.state = MusicMessageType.START;
+    }
+
     public SendMusicMessage(String url, int volume) {
         this.url = url;
         this.volume = volume;
@@ -27,8 +34,7 @@ public class SendMusicMessage implements IMessage<SendMusicMessage> {
     public void encode(SendMusicMessage message, FriendlyByteBuf buffer) {
         buffer.writeEnum(message.state);
         if (message.state == MusicMessageType.START) {
-            buffer.writeInt(message.url.length());
-            buffer.writeCharSequence(message.url, StandardCharsets.UTF_8);
+            buffer.writeUtf(message.url);
             buffer.writeInt(message.volume);
         }
     }
@@ -37,10 +43,9 @@ public class SendMusicMessage implements IMessage<SendMusicMessage> {
     public SendMusicMessage decode(FriendlyByteBuf buffer) {
         MusicMessageType state = buffer.readEnum(MusicMessageType.class);
         if (state == MusicMessageType.START) {
-            int l = buffer.readInt();
-            String url = String.valueOf(buffer.readCharSequence(l, StandardCharsets.UTF_8));
+            String url = buffer.readUtf();
             int volume = buffer.readInt();
-            return new SendMusicMessage(url, volume);
+            return new SendMusicMessage(URI.create(url), volume);
         }
         return new SendMusicMessage();
     }
@@ -48,7 +53,7 @@ public class SendMusicMessage implements IMessage<SendMusicMessage> {
     @Override
     public void handle(SendMusicMessage message, Supplier<NetworkEvent.Context> supplier) {
         supplier.get().enqueueWork(() -> {
-            if (message.state == MusicMessageType.START) ClientHandler.playMusic(message.url, message.volume);
+            if (message.state == MusicMessageType.START) ClientHandler.playMusic(message.url == null || message.url.isEmpty() ? null : URI.create(message.url), message.volume);
             if (message.state == MusicMessageType.STOP) ClientHandler.stopMusicIfPlaying();
         });
         supplier.get().setPacketHandled(true);

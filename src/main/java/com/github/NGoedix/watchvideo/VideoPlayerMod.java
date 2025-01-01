@@ -11,9 +11,8 @@ import com.github.NGoedix.watchvideo.item.ModItems;
 import com.github.NGoedix.watchvideo.util.RadioStreams;
 import com.github.NGoedix.watchvideo.util.cache.TextureCache;
 import com.github.NGoedix.watchvideo.util.displayers.VideoDisplayer;
-import me.srrapero720.watermedia.api.image.ImageAPI;
-import me.srrapero720.watermedia.api.image.ImageRenderer;
-import me.srrapero720.watermedia.core.tools.JarTool;
+import org.watermedia.api.image.ImageAPI;
+import org.watermedia.api.image.ImageRenderer;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
@@ -31,9 +30,10 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import com.github.NGoedix.watchvideo.common.CommonHandler;
+import org.watermedia.core.tools.JarTool;
 
 @Mod(Reference.MOD_ID)
-public class VideoPlayer {
+public class VideoPlayerMod {
 
     @OnlyIn(Dist.CLIENT)
     private static ImageRenderer IMG_PAUSED;
@@ -53,9 +53,9 @@ public class VideoPlayer {
     @OnlyIn(Dist.CLIENT)
     public static ImageRenderer step5Image() { return IMG_STEP5; }
 
-    public VideoPlayer() {
+    public VideoPlayerMod() {
         Reference.LOGGER.info("Initializing mod...");
-        IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        final IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         ModBlocks.register(eventBus);
         ModBlockEntities.register(eventBus);
@@ -79,9 +79,9 @@ public class VideoPlayer {
         ItemBlockRenderTypes.setRenderLayer(ModBlocks.TV_BLOCK.get(), RenderType.cutout());
         BlockEntityRenderers.register(ModBlockEntities.TV_BLOCK_ENTITY.get(), TVBlockRenderer::new);
 
-        IMG_PAUSED = ImageAPI.renderer(JarTool.readImage("/pictures/paused.png"), true);
-        IMG_STEP10 = ImageAPI.renderer(JarTool.readImage("/pictures/step10.png"), true);
-        IMG_STEP5 = ImageAPI.renderer(JarTool.readImage("/pictures/step5.png"), true);
+        IMG_PAUSED = ImageAPI.renderer("/pictures/paused.png", this.getClass().getClassLoader(), true);
+        IMG_STEP10 = ImageAPI.renderer("/pictures/step10.png", this.getClass().getClassLoader(), true);
+        IMG_STEP5 = ImageAPI.renderer("/pictures/step5.png", this.getClass().getClassLoader(), true);
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {

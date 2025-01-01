@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.util.function.Supplier;
 
 public class FrameVideoMessage implements IMessage<FrameVideoMessage> {
@@ -38,7 +39,7 @@ public class FrameVideoMessage implements IMessage<FrameVideoMessage> {
 
     @Override
     public void handle(FrameVideoMessage message, Supplier<NetworkEvent.Context> supplier) {
-        supplier.get().enqueueWork(() -> ClientHandler.manageVideo(message.url, message.pos, message.playing, message.tick));
+        supplier.get().enqueueWork(() -> ClientHandler.manageVideo(message.url == null || message.url.isEmpty() ? null : URI.create(message.url), message.pos, message.playing, message.tick));
         supplier.get().setPacketHandled(true);
     }
 }

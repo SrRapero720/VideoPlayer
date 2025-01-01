@@ -4,20 +4,21 @@ import com.github.NGoedix.watchvideo.util.displayers.IDisplay;
 import com.github.NGoedix.watchvideo.util.displayers.ImageDisplayer;
 import com.github.NGoedix.watchvideo.util.displayers.VideoDisplayer;
 import com.github.NGoedix.watchvideo.util.math.geo.Vec3d;
-import me.srrapero720.watermedia.api.image.ImageFetch;
-import me.srrapero720.watermedia.api.image.ImageRenderer;
+import org.watermedia.api.image.ImageFetch;
+import org.watermedia.api.image.ImageRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.sounds.SoundSource;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TextureCache {
-    private static final Map<String, TextureCache> CACHE = new HashMap<>();
+    private static final Map<URI, TextureCache> CACHE = new HashMap<>();
 
-    public final String url;
+    public final URI url;
     private volatile ImageFetch seeker;
     private volatile ImageRenderer picture;
     private volatile String error;
@@ -25,13 +26,13 @@ public class TextureCache {
     private volatile boolean isVideo = false;
     private final AtomicInteger usage = new AtomicInteger();
 
-    private TextureCache(String url) {
+    private TextureCache(URI url) {
         this.url = url;
         use();
         attemptToLoad();
     }
 
-    public static TextureCache get(String url) {
+    public static TextureCache get(URI url) {
         TextureCache cache = CACHE.get(url);
         if (cache != null) {
             cache.use();
@@ -48,13 +49,28 @@ public class TextureCache {
 
     private synchronized void attemptToLoad() {
         if (this.seeker != null) return;
-        if (!this.url.isEmpty()) {
-            this.seeker = new FramePictureFetcher(this, url);
+        if (this.url != null) {
+            this.seeker = new ImageFetch(url);
+            this.seeker.setSuccessCallback((imageRenderer, fromCache) ->
+                    Minecraft.getInstance().executeBlocking(() -> this.process(imageRenderer))
+            );
+            this.seeker.setErrorCallback((e, isVideo) -> Minecraft.getInstance().executeBlocking(() -> {
+
+                if (isVideo) {
+                    this.processVideo();
+                    return;
+                }
+
+                if (e == null) this.processFailed("download.exception.gif");
+                else if (e.getMessage().startsWith("Server returned HTTP response code: 403")) this.processFailed("download.exception.forbidden");
+                else if (e.getMessage().startsWith("Server returned HTTP response code: 404")) this.processFailed("download.exception.notfound");
+                else this.processFailed("download.exception.invalid");
+            }));
             this.seeker.start();
         }
     }
 
-    public IDisplay createDisplay(Vec3d pos, String url, float volume, float minDistance, float maxDistance, boolean loop, boolean playing, boolean isOnlyMusic) {
+    public IDisplay createDisplay(Vec3d pos, URI url, float volume, float minDistance, float maxDistance, boolean loop, boolean playing, boolean isOnlyMusic) {
         volume *= Minecraft.getInstance().options.getSoundSourceVolume(SoundSource.MASTER);
         if (picture == null) return VideoDisplayer.createVideoDisplay(pos, url, volume, minDistance, maxDistance, loop, playing, isOnlyMusic);
 
@@ -114,26 +130,4 @@ public class TextureCache {
     public static void clientTick() { CACHE.values().removeIf(o -> !o.isUsed()); }
     public static void renderTick() { VideoDisplayer.tick(); }
     public static void unload() { for (TextureCache cache : CACHE.values()) cache.remove(); CACHE.clear(); }
-
-    private static final class FramePictureFetcher extends ImageFetch {
-        public FramePictureFetcher(TextureCache cache, String originalURL) {
-            super(originalURL);
-
-            setOnSuccessCallback(imageRenderer -> Minecraft.getInstance().executeBlocking(() -> cache.process(imageRenderer)));
-
-            setOnFailedCallback(e -> Minecraft.getInstance().executeBlocking(() -> {
-                if (e instanceof NoPictureException) {
-                    cache.processVideo();
-                    return;
-                }
-
-                if (!cache.isVideo()) {
-                    if (e == null) cache.processFailed("download.exception.gif");
-                    else if (e.getMessage().startsWith("Server returned HTTP response code: 403")) cache.processFailed("download.exception.forbidden");
-                    else if (e.getMessage().startsWith("Server returned HTTP response code: 404")) cache.processFailed("download.exception.notfound");
-                    else cache.processFailed("download.exception.invalid");
-                }
-            }));
-        }
-    }
 }

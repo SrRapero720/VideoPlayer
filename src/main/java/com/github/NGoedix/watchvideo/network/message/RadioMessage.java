@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.util.function.Supplier;
 
 public class RadioMessage implements IMessage<RadioMessage> {
@@ -14,6 +15,12 @@ public class RadioMessage implements IMessage<RadioMessage> {
     private boolean playing;
 
     public RadioMessage() {}
+
+    public RadioMessage(URI url, BlockPos pos, boolean playing) {
+        this.url = url.toString();
+        this.pos = pos;
+        this.playing = playing;
+    }
 
     public RadioMessage(String url, BlockPos pos, boolean playing) {
         this.url = url;
@@ -35,7 +42,7 @@ public class RadioMessage implements IMessage<RadioMessage> {
 
     @Override
     public void handle(RadioMessage message, Supplier<NetworkEvent.Context> supplier) {
-        supplier.get().enqueueWork(() -> ClientHandler.manageRadio(message.url, message.pos, message.playing));
+        supplier.get().enqueueWork(() -> ClientHandler.manageRadio(message.url == null || message.url.isEmpty() ? null : URI.create(message.url), message.pos, message.playing));
         supplier.get().setPacketHandled(true);
     }
 }

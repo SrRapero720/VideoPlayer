@@ -5,7 +5,7 @@ import net.minecraftforge.fml.loading.FMLLoader;
 public class VideoPlayerUtils {
 
     public static boolean isInstalled(String... mods) {
-        for (String id: mods) {
+        for (final String id: mods) {
             if (FMLLoader.getLoadingModList().getModFileById(id) == null) {
                 return false;
             }

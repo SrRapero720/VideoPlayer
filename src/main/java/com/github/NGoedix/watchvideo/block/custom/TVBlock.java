@@ -6,6 +6,7 @@ import com.github.NGoedix.watchvideo.util.math.geo.AlignedBox;
 import com.github.NGoedix.watchvideo.util.math.geo.Facing;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
@@ -78,7 +79,7 @@ public class TVBlock extends Block implements EntityBlock {
         BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
         if (!pLevel.isClientSide) {
             if (blockEntity instanceof TVBlockEntity tvBlockEntity) {
-                tvBlockEntity.tryOpen(pLevel, pPos, pPlayer);
+                tvBlockEntity.tryOpen(pLevel, pPos, (ServerPlayer) pPlayer);
             }
         }
 

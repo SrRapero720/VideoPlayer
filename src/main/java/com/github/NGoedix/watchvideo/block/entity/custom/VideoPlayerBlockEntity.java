@@ -18,11 +18,12 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
+import java.net.URI;
 
 public abstract class VideoPlayerBlockEntity extends BlockEntity {
 
     // VIDEO / MUSIC  PROPERTIES
-    private String url = "";
+    private URI url = null;
     private boolean playing = false;
     private boolean stopped = false;
 
@@ -45,14 +46,14 @@ public abstract class VideoPlayerBlockEntity extends BlockEntity {
     }
 
     public boolean isURLEmpty() {
-        return url.isEmpty();
+        return url == null;
     }
 
-    public String getUrl() {
+    public URI getUrl() {
         return url;
     }
 
-    public void setUrl(String url) {
+    public void setUrl(URI url) {
         this.url = url;
         if (this.level == null) return;
         this.level.blockEntityChanged(this.worldPosition);
@@ -94,9 +95,9 @@ public abstract class VideoPlayerBlockEntity extends BlockEntity {
     }
 
     public IDisplay requestDisplay() {
-        String url = getUrl();
+        URI url = getUrl();
         if (isURLEmpty()) return null;
-        if (cache == null || !cache.url.equals(url)) {
+        if (cache == null || cache.url == null || !cache.url.equals(url)) {
             cache = TextureCache.get(url);
             if (display != null)
                 display.release();
@@ -155,7 +156,7 @@ public abstract class VideoPlayerBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag pTag) {
         super.saveAdditional(pTag);
 
-        pTag.putString("url", url == null ? "" : url);
+        pTag.putString("url", url == null ? "" : url.toString());
         pTag.putBoolean("playing", playing);
         pTag.putInt("tick", tick);
         pTag.putInt("volume", volume);
@@ -172,11 +173,18 @@ public abstract class VideoPlayerBlockEntity extends BlockEntity {
 
     public void loadFromNBTInternal(CompoundTag nbt) {
         loadFromNBT(nbt);
+        String str = nbt.getString("url");
+        if (str.isEmpty()) this.url = null;
 
-        url = nbt.getString("url");
-        playing = nbt.getBoolean("playing");
-        tick = nbt.getInt("tick");
-        volume = nbt.getInt("volume");
+        try {
+            this.url = new URI(str);
+        } catch (Exception e) {
+            this.url = null;
+        }
+
+        this.playing = nbt.getBoolean("playing");
+        this.tick = nbt.getInt("tick");
+        this.volume = nbt.getInt("volume");
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, BlockEntity blockEntity) {

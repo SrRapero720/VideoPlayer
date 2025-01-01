@@ -1,19 +1,29 @@
 modLoader="javafml"
-loaderVersion="[38,)"
-license="All Rights Reserved"
+loaderVersion="$fmlrange"
+license="$license"
+issueTrackerURL="https://github.com/${github}/issues"
+
 [[mods]]
-modId="videoplayer"
-version="3.0.5"
-displayName="VideoPlayer"
-authors="Goedix"
-description='''
-This mod allows the playback of videos in the user interface (GUI), you can play videos for all connected users or for a specific user.
-Thanks to anarkh_angel for the blocks.
-'''
-credits="Thanks J-RAP for the help with the API"
-[[dependencies.videoplayer]]
+    modId="$modid"
+    version="$modversion"
+    displayName="$modname"
+    displayTest="MATCH_VERSION"
+    logoFile="pack.png"
+    authors="$modauthors"
+    credits="$modcredits"
+    description='''$moddesc'''
+
+[[dependencies.$modid]]
     modId="watermedia"
     mandatory=true
-    versionRange="[2.0,)"
+    versionRange="$watermediarange"
     ordering="AFTER"
     side="CLIENT"
+
+[[dependencies.${modid}]]
+    modId="minecraft"
+    mandatory=true
+    # This version range declares a minimum of the current minecraft version up to but not including the next major version
+    versionRange="${minecraftversion}"
+    ordering="NONE"
+    side="BOTH"

@@ -6,6 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.net.URI;
 import java.util.function.Supplier;
 
 public class OpenRadioManagerScreen implements IMessage<OpenRadioManagerScreen> {
@@ -60,9 +61,10 @@ public class OpenRadioManagerScreen implements IMessage<OpenRadioManagerScreen> 
     public void handle(OpenRadioManagerScreen message, Supplier<NetworkEvent.Context> supplier) {
         supplier.get().enqueueWork(() -> {
             if (message.stack == null)
-                ClientHandler.openRadioGUI(message.blockPos, message.url, message.volume, message.isPlaying);
+                ClientHandler.openRadioGUI(message.blockPos, message.url == null || message.url.isEmpty() ? null : URI.create(message.url), message.volume, message.isPlaying);
             else
-                ClientHandler.openRadioGUI(message.stack, message.url, message.volume, message.isPlaying);
+                ClientHandler.openRadioGUI(message.stack, message.url == null || message.url.isEmpty() ? null : URI.create(message.url), message.volume, message.isPlaying);
         });
+        supplier.get().setPacketHandled(true);
     }
 }
